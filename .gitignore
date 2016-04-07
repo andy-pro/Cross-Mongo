@@ -1,0 +1,5 @@
+errors
+databases
+sessions
+*.bak
+*.pyc

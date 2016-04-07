@@ -1,0 +1,497 @@
+@media print {
+  a[href]:after {
+    content: none !important;
+  }
+}
+.input-group-btn > button {
+    margin-right: 0px;
+}
+/*input[type=checkbox], input[type=radio] { margin: 12px 4px 0 0; }*/
+.btn {
+    margin-right: 4px;
+}
+.table-supercondensed > tbody > tr > td {
+    padding: 1px 8px;
+}
+.chain-title {
+    background: #ffc;
+    color: #23527c!important;
+    /*color: #337ab7;*/
+    font-weight: 600;
+}
+
+.tdbtn {
+    background-color: inherit;
+    /*color: inherit;*/
+    color: red;
+    border: none;
+    cursor: normal!important;
+}
+div#gif {
+    display:    none;
+    position:   absolute;
+    z-index:    2000;
+    top:        0;
+    left:       0;
+    height:     100%;
+    width:      100%;
+    background: rgba( 255, 255, 255, .6 )
+                url('../images/loading.gif')
+                50% 50%
+                no-repeat;
+}
+/*body.loading .ajaxanimation {display: block;}*/
+.cont-mid { max-width: 600px; }
+div.pair-li { overflow: hidden; }
+div.pair-ol {
+    float: left;
+    background: #eee;
+    line-height: 16px;
+    width: 42px;
+    height: 190px;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #ccc;
+    padding-top: 6px;
+}
+textarea.pair-data {
+    margin-bottom:10px;
+    line-height: 16px;
+    font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+}
+pre.mypre {
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 14px;
+    white-space: pre-wrap;
+}
+div.table-container{
+    width: 100%;
+    max-height: 568px;
+    overflow: auto;
+}
+div.foundtable-container{
+    width: 100%;
+    max-height: 468px;
+    overflow: auto;
+}
+.checkbox label, .radio label{ color: #337ab7; }
+.nav input[type=checkbox] {
+    margin-left: -20px;
+    position: absolute;
+}
+.inmenu label{
+    padding-left: 15px;
+    padding-right: 20px;
+    cursor: pointer;
+}
+.inmenu{
+    padding-right: 50px;
+    margin: 0!important;
+}
+.myright { text-align: right; }
+#livesearchout{
+    display: none;
+    background: #ffc;
+    margin: 4px 0px;
+    padding: 5px 14px;
+    min-width: 300px;
+    max-height: 540px;
+    overflow: auto;
+    position: absolute;
+    z-index: 99;
+    border: 1px solid #A9A9A9;
+    border-width: 0 1px 1px 1px;
+    -webkit-box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.3);
+    -moz-box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.3);
+    -box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    box-shadow: 7px 7px 10px rgba(0, 0, 0, 0.2);
+}
+#livesearchout a{
+    cursor: pointer;
+    display: block;
+    color:#666666;
+}
+#livesearchout a:hover{
+    display: block;
+    color: #FFF;
+    text-decoration: none;
+    background-color: #337ab7;
+}
+.btn-inverse {
+    background-color: #333;
+    background-image: linear-gradient(to bottom, #666, #222);
+    background-repeat: repeat-x;
+    border-color: #666 #444 #444;
+    color: #fff;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.btn-inverse:hover, .btn-inverse:focus {
+    background-color: #222;
+    color: #fff;
+}
+.input-inverse {
+    background-color: #444;
+    border-color: #666;
+    color: #fff;
+    /*width: 270px;*/
+}
+a.inblock {
+    cursor: pointer;
+    display: inline-block;
+    padding: 2px 10px 2px 2px;
+}
+.color-root { color: inherit!important; }
+table#chaintable {
+    table-layout: fixed;
+    width: 100%;
+    margin: 15px 0px;
+}
+td.padd9 { padding: 9px!important; }
+tr.move { cursor: move; }
+
+/** vertical table css rules **/
+table.vertical { table-layout: fixed; }
+table.vertical td {
+    overflow: hidden;
+    overflow-x: hidden;
+    white-space: nowrap;
+    /*vertical-align: baseline;*/
+    padding: 0px 3px!important;
+}
+table.vertical a {
+    color: #136;
+    display: block;
+    font-size: 9pt;
+    text-decoration:none;
+    margin: 2px 0;
+}
+table sup {
+    margin: 0 8px 0 0;
+    font-size: 7pt;
+    color:#111;
+}
+.colv0 { width: 56px; }
+.colv1 { width: 44px; }
+/*table.vertical tr:hover { background: #ffc; }*/
+table.vertical tr:hover { background: #ccc!important; }
+td.found {background: #cfc;}
+td.new {background: #ffb;}
+td.cdfound {background: #cfc;}
+td.commondata a { color:#808; }
+/** cross table css rules **/
+
+div.flash {
+    background-image: none;
+    border-radius: 4px;
+    -o-border-radius: 4px;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    color: #333;
+    font-weight: 400;
+    min-width: 50px;
+    max-width: 500px;
+    opacity: 1;
+    vertical-align: baseline;
+    right: auto;
+    border-width: 1px;
+    margin: 0 0 20px;
+    padding: 15px 35px 15px 15px;
+    max-height: 540px;
+    overflow: auto;
+}
+div.flash.alert:hover {
+    opacity: 1;
+}
+.ie-lte8 div.flash {
+    filter: progid: DXImageTransform.Microsoft.gradient(startColorstr='#222222', endColorstr='#000000', GradientType=0);
+}
+.ie-lte8 div.flash:hover {
+    filter: alpha(opacity=25);
+}
+
+div.error {
+    width: auto;
+    background: transparent;
+    border: none;
+    background-image: none;
+    color: red;
+    display: inline-block;
+    padding: 5px;
+}
+div.flash.alert {
+    display: none;
+    position: fixed;
+    top: 70px;
+    right: 30px;
+    cursor: pointer;
+    z-index: 1000;
+    background-color: #9eedbe;
+    border-color: #f0c36d;
+}
+.w2p-toolbar-hidden {
+    margin: 10px;
+}
+ul.w2p_list {
+    margin-left: 0;
+    padding-left: 0;
+}
+.w2p_list li {
+    margin-bottom: 6px;
+}
+.w2p_list li input {
+    display: inline-block;
+    width: 85%;
+    margin-right: 4px;
+}
+.w2p_list li a {
+    margin-bottom: 2px;
+}
+div[id^=_autocomplete_] {
+    margin-top: -10px;
+    z-index: 1;
+}
+select.autocomplete {
+    display: block;
+    font-size: 14px;
+    line-height: 1.428571429;
+    color: #555;
+    vertical-align: middle;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -webkit-transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+    transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+    border-color: #428bca;
+    padding: 6px 12px;
+}
+#web2py-logo {
+    color: #c6cecc;
+}
+#web2py-logo b {
+    display: inline-block;
+    margin-top: -1px;
+}
+#web2py-logo b>span {
+    font-size: 22px;
+    color: #FFF;
+}
+#web2py-logo:hover {
+    color: #FFF;
+}
+.footer > .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+    margin: 20px;
+}
+.background {
+    background: url(../images/background.jpg) no-repeat center center;
+}
+body {
+    padding-top: 50px;
+    margin-bottom: 60px;
+    background: #eaeaea url('bg.png');
+}
+header {
+    -webkit-box-shadow: 0 0 8px 2px #000;
+    -moz-box-shadow: 0 0 8px 2px #000;
+    box-shadow: 0 0 8px 2px #000;
+    margin-bottom: 10px;
+}
+html {
+    position: relative;
+    min-height: 100%;
+}
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 60px;
+    background: #333;
+    color: #aaa;
+}
+header h1 {
+    color: #FFF!important;
+    text-shadow: 0 0 7px #000;
+}
+header .jumbotron {
+    background-color: transparent;
+}
+.flash {
+    opacity: 0.9!important;
+    right: 100px;
+}
+.right {
+    float: right;
+    text-align: right;
+}
+.left {
+    float: left;
+    text-align: left;
+}
+.center {
+    width: 100%;
+    text-align: center;
+    vertical-align: middle;
+}
+td.w2p_fw {
+    padding-bottom: 1px;
+}
+td.w2p_fl {
+    text-align: left;
+}
+td.w2p_fl,
+td.w2p_fw {
+    padding-right: 7px;
+}
+td.w2p_fl,
+td.w2p_fc {
+    padding-top: 4px;
+}
+div.w2p_export_menu {
+    margin: 5px 0;
+}
+div.w2p_export_menu a,
+div.w2p_wiki_tags a,
+div.w2p_cloud a {
+    margin-left: 5px;
+    padding: 2px 5px;
+}
+#submit_record__row td {
+    padding-top: .5em;
+}
+div.error_wrapper {
+    display: block;
+}
+.copyright {
+    float: left;
+}
+#poweredBy {
+    float: right;
+}
+.web2py_grid tbody td {
+    vertical-align: middle;
+    padding: 2px 5px;
+}
+.web2py_grid thead th,
+.web2py_grid tfoot td {
+    background-color: #EAEAEA;
+    padding: 10px 5px;
+}
+.web2py_grid tr.odd {
+    background-color: #F9F9F9;
+}
+.web2py_grid tr:hover {
+    background-color: #F5F5F5;
+}
+.web2py_console form {
+    width: 100%;
+    display: inline;
+    vertical-align: middle;
+    margin: 0 0 0 5px;
+}
+.web2py_console form select {
+    margin: 0;
+}
+.web2py_search_actions {
+    float: left;
+    text-align: left;
+    width: 100%;
+}
+.web2py_grid .row_buttons {
+    min-height: 25px;
+    vertical-align: middle;
+}
+.web2py_grid .row_buttons a {
+    margin: 3px;
+}
+.web2py_grid .row_buttons a,
+.web2py_paginator ul li a,
+.web2py_search_actions a,
+.web2py_console input[type=submit],
+.web2py_console input[type=button],
+.web2py_console button {
+    line-height: 20px;
+    margin-right: 2px;
+    display: inline-block;
+    padding: 3px 5px;
+}
+.web2py_counter {
+    margin-top: 5px;
+    margin-right: 2px;
+    width: 35%;
+    float: right;
+    text-align: right;
+}
+.web2py_table {
+    clear: both;
+    display: block;
+}
+.web2py_paginator {
+    text-align: right;
+    background-color: #f2f2f2;
+    padding: 5px;
+}
+.web2py_paginator ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+.web2py_paginator .current {
+    font-weight: 700;
+}
+.web2py_breadcrumbs ul {
+    list-style: none;
+    margin-bottom: 18px;
+}
+li.w2p_grid_breadcrumb_elem {
+    display: inline-block;
+}
+.web2py_console input,
+.web2py_console select,
+.web2py_console a {
+    margin: 2px;
+}
+#wiki_page_body {
+    width: 600px;
+    height: auto;
+    min-height: 400px;
+}
+.ie-lte7 .topbar .container {
+    z-index: 2;
+}
+.ie9 #w2p_query_panel {
+    padding-bottom: 2px;
+}
+.web2py_console .form-control {
+    width: 20%;
+    display: inline;
+}
+.web2py_console #w2p_keywords {
+    width: 50%;
+}
+.web2py_search_actions a,
+.web2py_console input[type=submit],
+.web2py_console input[type=button],
+.web2py_console button {
+    padding: 6px 12px;
+}
+td.w2p_fl,
+td.w2p_fw,
+td.w2p_fc,
+#web2py_user_form td,
+.web2py_grid .web2py_form td {
+    vertical-align: top;
+}
+#auth_user_remember__row label,
+.web2py_paginator ul li {
+    display: inline;
+}
+.web2py_grid,
+.web2py_grid table {
+    width: 100%;
+}
