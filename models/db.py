@@ -12,10 +12,6 @@ myconf = AppConfig()
 #db = DAL(myconf.take('db.uri'), pool_size=myconf.take('db.pool_size', cast=int), check_reserved=['common'], migrate_enabled=False)
 #db = DAL(myconf.take('db.uri'), pool_size=myconf.take('db.pool_size', cast=int), check_reserved=['common'], migrate_enabled=True)
 
-
-
-
-#client = pymongo.MongoClient('mongodb://localhost:8001/')
 client = pymongo.MongoClient('localhost', 8001)
 dbm = client.cross
 dbauth = dbm.auth_user
@@ -23,7 +19,6 @@ dbcable = dbm.cables
 dbcross = dbm.crosses
 dbvert = dbm.verticals
 dbplint = dbm.plints
-
 
 ## gluon/packages/dal/pydal/objects.py line 954:  curr_id = self.insert(**dict(items)) returns None if adapter_args={"safe":False}
 #db = DAL('mongodb://localhost:8001/cross', pool_size=1, check_reserved=['mongodb_nonreserved'], adapter_args={"safe":False})
@@ -148,13 +143,13 @@ get_pdet = lambda rec: '\n'.join(p['det'] or '' for p in rec['pairs'])
 get_pttl_array = lambda rec: [p['ttl'] or '' for p in rec['pairs']]
 
 #get_whenwho = lambda: dict(modon=request.now.date(), modby=user_id)
-get_whenwho = lambda: dict(modon=request.now, modby=user_id)
+#get_whenwho = lambda: dict(modon=request.now, modby=user_id)
 
 ## after defining tables, uncomment below to enable auditing
 # auth.enable_record_versioning(db)
 
-#user_id = '%X'%auth.user.id if auth.user else False
-user_id = '%X'%auth.user.id if auth.user else ''
+user_id = '%X'%auth.user.id if auth.user else False
+#user_id = ObjectId(auth.user.id) if auth.user else ''
 is_admin = auth.has_membership('administrators')
 
 #if auth.user:
@@ -200,15 +195,21 @@ if not request.ajax:
                 (itext('cog', 'RESTful API'), False, URL('default', 'api/patterns'))]
         response.toolsmenu = [(T('Tools'), False, '#', toolsmenu)]
 
+
+def init_item(self, dbitem, oi):
+    self.oi = oi
+    self._id = {'_id': oi}
+    self.record = dbitem.find_one(self._id)
+    if not self.record: raise HTTP(404)
+    self.soi = str(oi)
+    _rec = self.record
+    self.title = _rec['title']
+    return _rec
+
 # ========== Class Cross ==========
 class Cross:
     def __init__(self, oi):
-        self.oi = oi
-        self._id = {'_id': oi}
-        self.record = dbcross.find_one(self._id)
-        if not self.record: raise HTTP(404)
-        _rec = self.record
-        self.title = _rec['title']
+        _rec = init_item(self, dbcross, oi)
         self.header = T('Cross')+' '+self.title
 
     def update(self, vars):
@@ -222,114 +223,149 @@ class Cross:
         return vt or changed
 
     def delete(self):
+        rows = dbvert.find({'cross': self.oi})
+        for r in rows:
+            v = r['_id']
+            dbplint.delete_many({'vertical': v})
+            dbvert.delete_one({'_id': v})
         dbcross.delete_one(self._id)
 ## end class Cross
 
 # ========== Class Vertical ==========
 class Vertical:
     def __init__(self, oi):
-        self.oi = oi
-        self.soi = str(oi)
-        self.record = dbvert.find_one({'_id': oi})
-        if not self.record: raise HTTP(404)
-        _rec = self.record
+        _rec = init_item(self, dbvert, oi)
         self.cross = Cross(_rec['cross'])
-        self.title = _rec['title']
         self.header = self.cross.header + ', %s %s' % (T('Vertical'), self.title)
 
     def delete(self):
-        del db.verticals[self.index]
+        dbplint.delete_many({'vertical': self.oi})
+        dbvert.delete_one(self._id)
 
     def update(self, vars):
-        if vars.cable:
-            db.cables[vars.cable.id] = vars.cable.maindata
         changed = False
-        if self.title != vars.title:
-            db.verticals[self.index] = {'title': vars.title}
-            changed = True
-        for plint in vars.plints:
-            pt = plint.maindata.title
-            xp = db((db.plints.title==pt) & (db.plints.vertical==self.index)).select().first()
-            if not xp:  # if plint not exist then create it
-                xp = db.plints.insert(cross=self.cross.index, vertical=self.index)
-            if plint_update(xp.id, plint.maindata, plint.pairdata):
+        if vars.has_key('cable'):
+            cable = vars['cable']
+            cable_oi = ObjectId(cable['_id'])
+            if cable.has_key('set'):
+                dbcable.update_one({'_id': cable_oi}, {'$set': cable['set']})
                 changed = True
-        for plint in vars.rplints:
-            if plint_update(plint.id, plint.maindata, {}):
+        else:
+            cable_oi = None
+        if self.title != vars['title']:
+            dbvert.update_one(self._id, {'$set': {'title': vars['title']}})
+            changed = True
+
+        for plint in vars['plints']:
+            if plint.has_key('cable'):
+                plint['cable'] = cable_oi
+            xp = dbplint.find_one({'title':plint['title'], 'vertical': self.oi})
+            if xp:
+                if plint_update(xp, plint):
+                    changed = True
+            else:  # if plint not exist then create it
+                self.insert_new_plint(plint)
+                changed = True
+        for plint in vars['rplints']:
+            if plint.has_key('cable'):
+                plint['cable'] = cable_oi
+            if plint_update(None, plint):
                 changed = True
         return changed
+
+    def insert_new_plint(self, plint):
+        mon = request.now
+        mby = ObjectId(user_id)
+        plint['pairs'] = []
+        for i in xrange(10):
+            ttl = 'pairs.%i.ttl'%i
+            plint['pairs'].append({'ttl':plint[ttl], 'mon':mon, 'mby':mby, 'det':'', 'pos':0, 'par':0, 'clr':0})
+            del plint[ttl]
+        plint.update({'vertical':self.oi, 'mon':mon, 'mby':mby})
+        plint['cable'] = plint.get('cable', None)
+        dbplint.insert_one(plint)
 ### end class Vertical
 
 # ========== Class Plint ==========
 class Plint:
     def __init__(self, oi):
-        self.oi = oi
-        self.soi = str(oi)
-        self.record = dbplint.find_one({'_id': oi})
-        if not self.record: raise HTTP(404)
-        _rec = self.record
+        _rec = init_item(self, dbplint, oi)
         self.vertical = Vertical(_rec['vertical'])
         self.cross = self.vertical.cross
-        self.title =_rec['title']
         self.titles = self.cross.title, self.vertical.title,  self.title
         self.header = self.vertical.header + ', %s %s' % (T('Plint'), self.title)
         self.address = '%s %s %s' % self.titles
-        self.modified_info = '%s %s, %s' % (T('Last modified'), _rec['modon'], get_user_name(_rec['modby'])['who'])
+        self.modified_info = '%s %s, %s' % (T('Last modified'), _rec['mon'], get_user_name(_rec['mby'])['who'])
         self.comdata = _rec['comdata']
         self.start1 = _rec['start1']
 
     #get_pair_titles = lambda self: [self.record(pairtitles[i]) for i in xrange(10)]
-    get_fieldset = lambda self, f: [self.record('%s%i' % (f,i)) or '' for i in xrange(1,11)]
-    get_fieldstring = lambda self, f: '\n'.join(self.get_fieldset(f)).rstrip()
+    #get_fieldset = lambda self, f: [self.record('%s%i' % (f,i)) or '' for i in xrange(1,11)]
+    #get_fieldstring = lambda self, f: '\n'.join(self.get_fieldset(f)).rstrip()
 
     def delete(self):
-        del db.plints[self.index]
+        dbplint.delete_one(self._id)
 
     def update(self, vars):
-        maindata = dict(title=vars.title, start1=bool(vars.start1), comdata=vars.comdata)
-        pidnew = vars.pairtitles.splitlines()
-        pdtnew = vars.pairdetails.splitlines()
-        pidl = len(pidnew)
-        pdtl = len(pdtnew)
-        pairdata = {}
+        plint = {'title':vars.title, 'start1':int(bool(vars.start1)), 'comdata':vars.comdata}
+        ttls = vars.pairtitles.splitlines()
+        dets = vars.pairdetails.splitlines()
+        ttll = len(ttls)
+        detl = len(dets)
         for i in xrange(10):
-            pairdata['pid'+`i+1`] = pidnew[i] if pidl > i else ''
-            pairdata['pdt'+`i+1`] = pdtnew[i] if pdtl > i else ''
-        return plint_update(self.index, maindata, pairdata, bool(vars.merge), vars.mergechar or '')
-
-def plint_update(index, maindata, pairdata, merge=False, mergechar=''):
-    """
-    index - record id
-    maindata - dict, possible keys: title, start1, comdata, cable
-    pairdata - dict, possible keys: pid1-10:title; pdt1-10:details; pch1-10:position in chain; par1-10:parallel existence; clr1-10:pair color
-    merge - boolean, if True, new pair title merge with existing
-    """
-    table = db.plints
-    plint = table[index]
-    whenwho = get_whenwho()
-    changed = False
-    if maindata:
-        keys = maindata.keys()
-        for key in keys:
-            if plint(key) != maindata[key]: changed = True
-            if table[key].type.startswith('reference') and maindata[key]==0: maindata[key]=None
-    if pairdata:
-        keys = pairdata.keys()
-        for key in keys:
-            s1=plint(key)   # old value
-            s2=pairdata[key]    # new value
-            if merge and (key[:3]=='pid' or key[:3]=='pdt'): s2 = (s1 + mergechar + s2).strip()
-            if s1 != s2:
-                changed = True
-                maindata[key] = s2
-                sk = str(key[3:])   # 'pid','pdt','pch','par','clr'  must be 3 symbols
-                maindata['pmodon' + sk] = whenwho['modon']
-                maindata['pmodby' + sk] = whenwho['modby']
-    if changed:
-        maindata.update(whenwho)
-        db.plints[index] = maindata
-    return changed
+            pre = 'pairs.%i.'%i
+            plint[pre+'ttl'] = ttls[i] if ttll > i else ''
+            plint[pre+'det'] = dets[i] if detl > i else ''
+        return plint_update(self.record, plint, bool(vars.merge), vars.mergechar or '')
 #### end class Plint
+
+def plint_update(xp=None, plint=None, merge=False, mergechar=''):
+    #dbplint.update_one({'_id': oi}, {'$set': {'title': vars.title}})
+    """
+    xp - record '_id' (str), ObjectId, dict or None
+    plint - dict with plint data, must contains '_id' if xp=None
+    merge - boolean, if True, new pair title merge with existing
+    mergechar - 'old title' + mergechar + 'new title'
+    """
+
+    def add_wh(pre=''): # add whenwho info
+        pd[pre + 'mon'] = mon
+        pd[pre + 'mby'] = mby
+
+    if not isinstance(xp, dict):
+        if not isinstance(xp, ObjectId):
+            if not xp:
+                xp = plint.pop('_id')
+            xp = ObjectId(xp)
+        xp = dbplint.find_one({'_id': xp})
+
+    changed = False
+    if xp:
+        mon = request.now
+        mby = ObjectId(user_id)
+        pd = {}
+        for mkey in plint:
+            src = plint[mkey]
+            if mkey.startswith('pairs'):
+                fp = mkey.split('.')
+                i = int(fp[1])
+                fk = fp[2]
+                dst = xp['pairs'][i][fk]
+                if (fk=='ttl' or fk=='det'):
+                    src = src.strip()
+                    dst = dst.strip()
+                    if merge:
+                        src = (dst + mergechar + src)
+                if src != dst:
+                    pd[mkey] = src
+                    add_wh('pairs.%i.'%i)
+            elif src != xp[mkey]:
+                pd[mkey] = src
+        if len(pd.keys()):
+            add_wh()
+            dbplint.update_one({'_id': xp['_id']}, {'$set': pd})
+            changed = True
+    return changed
 
 # ========== Class Pair ==========
 class Pair:

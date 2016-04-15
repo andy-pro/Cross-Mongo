@@ -87,63 +87,89 @@ def db_init():
     try:
         f = open(os.path.join(request.folder, 'private', 'tables.csv'), 'r')
         db.import_from_csv_file(f, {}, restore = True)
-        #__db_plints_convert()
+        __db_convert()
         msg = 'All tables initialized'
     except:
         msg = 'Error initialization'
     session.flash = msg
     redirect(URL('default', 'index'))
 
-def db_plints_convert():
-    #oi = ObjectId('56fed74713e0ec0fa4da7a91')
+def __db_convert():
 
-    plints = dbplint.find()
-    for plint in plints:
-        #plint = dbplint.find_one({'_id': oi})
+    #cyr_to_lat = lambda s: s.replace('БМ', 'BM').replace('БКТ', 'BKT').replace('М', 'M').replace('К', 'K').replace('Р', 'P')
+    cyr_to_lat = lambda s: s.replace('М', 'M')
+
+    for cable in dbcable.find():
+        oi = cable['_id']
+        try:
+            pd = {
+                'title': cable['title'].strip(),
+                'details': cable['details'].strip(),
+                'color': int(cable['color'])
+            }
+            dbcable.replace_one({'_id': oi}, pd)
+        except:
+            print 'Error for cable', oi
+
+    for plint in dbplint.find():
         oi = plint['_id']
         try:
-            cable = plint['cable']
-            if str(cable) == '000000000000000000000000':
-                cable = None
             pd = {
-                'cross': plint['cross'],
                 'vertical': plint['vertical'],
-                'title': plint['title'],
+                'title': cyr_to_lat(plint['title'].strip()),
                 'start1': int(plint['start1']),
-                'comdata': plint['comdata'],
-                'modon': plint['modon'],
-                'modby': plint['modby'],
-                'cable': cable,
+                'comdata': plint['comdata'].strip(),
+                'mon': plint['modon'],
+                'mby': plint['modby'],
+                'cable': None if str(plint['cable']) == '000000000000000000000000' else plint['cable'],
                 'pairs': []
             }
             for i in xrange(10):
                 pf = pairfields[i]
                 pd['pairs'].append({
-                    'ttl': plint[pf[0]],
+                    'ttl': plint[pf[0]].strip(),
                     'mon': plint[pf[1]],
                     'mby': plint[pf[2]],
-                    'det': plint[pf[3]],
-                    'pos': plint[pf[4]],
+                    'det': plint[pf[3]].strip(),
+                    'pos': int(plint[pf[4]]),
                     'par': int(plint[pf[5]]),
-                    'clr': plint[pf[6]]
+                    'clr': int(plint[pf[6]])
                 })
-            dbplint.update({'_id': oi}, pd )
+            #dbplint.update({'_id': oi}, pd) # DEPRECATED
+            dbplint.replace_one({'_id': oi}, pd)
         except:
             print 'Error for plint', oi
+    return 'Database converted!'
 
-def db_plints_cable_convert():
-    plints = dbplint.find()
-    for plint in plints:
-        cable = plint['cable']
-        if str(cable) == '000000000000000000000000':
-            cable = None
-            dbplint.update_one( { '_id': plint['_id'] }, { "$set": {"cable": cable} } )
+def __truncate_db():
+    for c in dbm.collection_names(False):
+        dbm.drop_collection(c)
+    return 'Database cleared!'
 
 @auth.requires_membership('administrators')
 def cleardb():
-    for table in reversed(tables): db[table].truncate()
+    #for table in reversed(tables): db[table].truncate()
+    __truncate_db()
     session.flash = T('Database cleared')
     redirect(URL('default', 'index'))
+
+def find_air_plint():
+    l = [p['_id'] for p in dbplint.find({'vertical': {'$nin': [i['_id'] for i in dbvert.find()]}})]
+    #print l
+    return '%i plints found' % len(l)
+
+def find_air_vertical():
+    l = [p['_id'] for p in dbvert.find({'cross': {'$nin': [i['_id'] for i in dbcross.find()]}})]
+    #print l
+    return '%i verticals found' % len(l)
+
+def del_air_plint():
+    result = dbplint.delete_many({'vertical': {'$nin': [i['_id'] for i in dbvert.find()]}})
+    return 'Delete %i plints' % result.deleted_count
+
+def del_air_vertical():
+    result = dbvert.delete_many({'cross': {'$nin': [i['_id'] for i in dbcross.find()]}})
+    return 'Delete %i plints' % result.deleted_count
 
 @cache.action()
 def download():

@@ -20,7 +20,7 @@ var app = {
 	api: 'ajax',
 
 	LINK_CLRS:  ['#fff', '#9ff', '#f9f', '#ff9', '#aaf', '#afa', '#faa', '#bdf', '#fbd', '#dfb', '#fdb'],
-	CABLE_CLRS: ['#fff', '#bff', '#fbf', '#ffb', '#ccf', '#bfc', '#fcc', '#cef', '#fce', '#efe', '#fdc'],
+	CABLE_CLRS: ['#fff', '#bff', '#fbf', '#ffb', '#ccf', '#bfc', '#fcc', '#cdf', '#fce', '#efe', '#fdc'],
 	/* for DEBUG */
 	vars_watch: function() {
 		$("#varswatch").text('Size of jQuery cache:%s, Size of window:%s'.format(Object.keys($.cache).length, Object.keys(window).length));
@@ -104,7 +104,7 @@ var app = {
 			out.push.call(out,
 				`<tr style="background:${app.LINK_CLRS[link.clr]}">`,
 				app.pairRow(link),
-				`<td>${link.pdt}</td><td>${link.comdata}</td><td>${link.par?L.i_ok:""}</td></tr>`
+				`<td>${link.det}</td><td>${link.comdata}</td><td>${link.par?L.i_ok:""}</td></tr>`
 			);
 		});
 		return out.join('');

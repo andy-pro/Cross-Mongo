@@ -123,10 +123,9 @@ function EditVerticalCtrl() {
     vertical = {plints:[], rplints:[]};
     var data = {rows:[]};
     //console.log(link);
-    if (inputs.delete) vertical.delete = 'on';
-    else {
+    if (!inputs.delete) {
       $('#verttitle').text(inputs.title);
-      var plintmask = inputs.plintmask, cable = 0;
+      var plintmask = inputs.plintmask, cable = '';
       if (plintmask) {
         var cnt = inputs.count;
         if (isNaN(cnt) || cnt=='' || cnt>100 || cnt<0) $('#plintCount').addClass('has-error');
@@ -140,7 +139,9 @@ function EditVerticalCtrl() {
           editor = taEl.val().split('\n'),
           editor_en = editor && /%E/.test(pairmask);
           for(var i=0; i<cnt; i++) {
-            var plint = {maindata:{},pairdata:{}},
+            //var plint = {maindata:{},pairdata:{}},
+            //var plint = {pairs: []},
+            var plint = {},
                 title = plintmask.getCounter(/%(\d+)/g, i),   // plint title with counter
                 pairbase = pairmask.getCounter(/%(\d+)/g, i),   // plint counter for pair
                 set, row, cd, rcd = '', start1, rem_rec = '',
@@ -149,30 +150,31 @@ function EditVerticalCtrl() {
               set = oldset;
               cd = oldplint.comdata.unescapeHTML(); // actual common data from old plint
               start1 = inputs.start1all ? inputs.start1 : oldplint.start1;
-              if (i==0) cable = oldplint.cable || 0;
+              if (i==0) cable = oldplint.cable || '';
             } else {
               set = newset;
               cd = '';
               start1 = inputs.start1;
             }
-            if (!oldplint || inputs.start1all) plint.maindata['start1'] = start1;
+            if (!oldplint || inputs.start1all) plint.start1 = start1;
             if (link.vertical.title && link.plint.data[remote+i]) {
               rem_rec = link.plint.data[remote+i];   // [id, title, start1, comdata]
               if (inputs.rcdreplace) {
                 rcd = rcdmask.getComData(rem_rec[3], title, i);
-                vertical.rplints.push({id:rem_rec[0], maindata:{comdata:rcd}});
+                vertical.rplints.push({_id:rem_rec[0], comdata:rcd});
               }
               rem_rec = rem_rec[1];   // remote plint title
             }
             row = {class:set[0], hint:set[2], start1:start1, title:title.escapeHTML(), chr:set[1], cd:cdmask.getComData(cd, rem_rec, i), rcd:rcd, pairs:[]};
-            plint.maindata['title'] = title;
-            plint.maindata['comdata'] = row.cd;
+            plint.title = title;
+            plint.comdata = row.cd;
             set = editor_en ? (editor[i] || '').split('\t')	: '';	// set of pair titles from editor
             for(var j=0; j<10; j++) {
               title = $.trim(pairbase.getCounter(/%P(\d+)/g, j).getCounter(/%D(\d+)/g, i*10+j)
               .replace(/%A/g, oldplint ? oldplint.pairs[j].unescapeHTML() : '')
               .replace(/%E/g, set[j] || ''));
-              plint.pairdata['pid'+String(j+1)] = title;
+              //plint.pairs.push({ttl: title});
+              plint[`pairs.${j}.ttl`] = title;
               row.pairs.push(title);
             }
             data.rows.push(row);
@@ -214,22 +216,26 @@ function EditVerticalCtrl() {
   function verticalSubmit() {
     localStorage.pairmask = inputs.pairmask;
     localStorage.cdmask = inputs.cdmask;
-    vertical.title = inputs.title;
-    if ($('#setCable')[0].checked) {
-      var cid = +scEl.val();
-      if (vertical.plints.length) {
-        var details = vertical.plints[0].maindata.comdata;
-        for (var ci in vertical.plints) vertical.plints[ci].maindata.cable = cid;
-        if (vertical.rplints.length) {
-          for(var ci in vertical.rplints) vertical.rplints[ci].maindata.cable = cid;
-          if (cid) vertical.cable = {id:cid, maindata:{details:vertical.rplints[0].maindata.comdata + ' - ' + details}};
-        }
-      }
-    }
     $scope.formData = {};
-    $scope.formData.vertical = JSON.stringify(vertical);
+    if (inputs.delete) $scope.formData.delete = 1;
+    else {
+      vertical.title = inputs.title;
+      if ($('#setCable')[0].checked) {
+        var cid = scEl.val(), ci = 0;
+        if (cid) {
+          vertical.cable = {_id: cid};
+          ci = 1;
+          if (vertical.plints.length && vertical.rplints.length) {
+            vertical.cable.set = {details: vertical.rplints[0].comdata + ' - ' + vertical.plints[0].comdata};
+          }
+        }
+        vertical.plints.forEach(function(p) {p.cable = ci});
+        vertical.rplints.forEach(function(p) {p.cable = ci});
+      }
+      $scope.formData.vertical = JSON.stringify(vertical);
+    }
     //console.log($scope.formData); return false;
-    return form.post();
+    return form.post(); // don't send form data to 'post' handler
   }
 
   const _th_com_ = '<th width="14%">'+tbheaders[2]+'</th><th width="6%">+/~</th>';
@@ -243,7 +249,7 @@ function EditVerticalCtrl() {
     function() {
       $scope.verticalId = $request.args[0];
       if ($scope.s_plint) $scope.s_plint.mask = $scope.s_plint.title.replace(/(\d+)/, '%$1');
-      else $scope.s_plint = {mask:'М%1', count:0};
+      else $scope.s_plint = {mask:'M%1', count:0};
       $scope.cdmask = localStorage.cdmask || '%A %C %V %M';
       $scope.pairmask = localStorage.pairmask || '%A %E';
       $scope.doctitle = $scope.header;
@@ -253,7 +259,7 @@ function EditVerticalCtrl() {
       $('#helpbtn').click(function() { $.get(web2spa.static_path + "varhelp.html").success(function(data) { web2spa.show_msg(data, 'default', 0); }); });
       $('#editor').change(function() { if (this.checked) { taEl.show(); taEl.focus(); } else taEl.hide(); });
       vmEl = $('input[name=view]').on('change', viewChange);
-      scEl = $('#cables');
+      scEl = $('#cables'); // <select>
       form = new Form({submit: verticalSubmit, events: verticalChange});
       inputs = form.inputs;   // shorthand
       taEl = $('textarea').on('input', verticalChange).keydown(forceTab);
@@ -307,14 +313,17 @@ function EditPairCtrl() {
 
   function editpairSubmit() {	// submit edit pair ctrl
     //console.info(chain);
-    var id, title = this.title.value, details = this.details.value;
+    var title = this.title.value,
+        details = this.details.value;
     if (chainMode) chain.order(title, details);
     else {
-      id = $request.args;
-      chain = {plints:{}};
-      chain.plints[id[0]] = {};
-      chain.plints[id[0]]['pid'+id[1]] = title;
-      chain.plints[id[0]]['pdt'+id[1]] = details;
+			var id = $request.args,
+					pre = `pairs.${id[1]}.`,
+					p = {};
+			p[pre + 'ttl'] = title;
+			p[pre + 'det'] = details;
+	    chain = {plints:{}};
+	    chain.plints[id[0]] = p;
     }
     $scope.formData = {};
     $scope.formData.plints = JSON.stringify(chain.plints);
@@ -322,10 +331,7 @@ function EditPairCtrl() {
     return form.post();
   }
 
-  //var chainMode = $request.vars.chain, form, chain;
-  //var chainMode, form, chain;
-  var chainMode, form;
-  window.chain = 1;
+  var chainMode, form, chain;
   web2spa.load_and_render(null, function() {
     form = new Form({submit: editpairSubmit});
     chainMode = $scope.chain_mode;
@@ -355,21 +361,21 @@ function EditFoundCtrl() {
 
   function refreshFoundTable() {
     var ftext = inputs.find.escapeHTML(),
-      rtext = inputs.replace.escapeHTML(),
-      re = new RegExp(ftext, 'i');
-    //var out = '<span style="background-color: #ff6">'+(inputs.follow ? rtext : ftext)+'</span>';
-    var out = '<span style="background-color: #ff6">'+(inputs.follow ? rtext : '$&')+'</span>';
+      rtext = inputs.replace.escapeHTML(), re;
+		try {
+		  re = new RegExp(ftext, 'i');
+			var out = '<span style="background-color: #ff6">'+(inputs.follow ? rtext : '$&')+'</span>';
+		}
+		catch(e) {}
     fdata.forEach(function(pair) {
       pair.cell.innerHTML = _mypre.format(pair.title.replace(re, out));
-      pair._title = pair.title.replace(re, rtext);
-      plints[pair.plintId]['pid'+pair.pairId] = pair._title.unescapeHTML();
+      plints[pair.plintId][`pairs.${pair.pairId}.ttl`] = pair.title.replace(re, rtext).unescapeHTML();
     });
   }
 
   function plints_to_pairs() {
     var lq = $request.vars.search.toLowerCase()
     $.each($scope.plints, function(key, plint) {  // convert : array of plints to array of pairs
-      //var start1 = parseInt(plint.start1);
       $.each(this.pairs, function(idx, pair) {
         var ttl = pair[0];
         if (ttl.toLowerCase().indexOf(lq) >= 0) {
@@ -383,7 +389,7 @@ function EditFoundCtrl() {
           title: ttl,
           details: pair[3],
           comdata: plint.comdata,
-          pairId: idx+1,    // idx in range 0-9, pid in range 1-10
+          pairId: idx,
           start1: plint.start1});
           if (!plints[plint.id]) plints[plint.id] = {};
         }
@@ -416,45 +422,41 @@ function EditFoundCtrl() {
 function EditCablesCtrl() {
 
   function cablesSubmit() {
-var cables = [], cable, _c;
-cdata.forEach(function(_c) {
-  title = _c.title.val();
-  cable = {};
-  try {
-if (_c.id) {
-  cable.id = _c.id;
-  if (_c.delete.is(':checked') || !title) { cable.delete = 'on'; throw false; }
-  else throw true;
-} else if (title) throw true;
-  } catch(e) {
-if (e) { cable.title = title; cable.details = _c.details.val(); cable.color = _c.clr; }
-cables.push(cable);
-  }
-});
-$scope.formData = {};
-$scope.formData.cables = JSON.stringify(cables);
-//console.table(cables); console.log($scope.formData.cables); return false;
-return form.post();
+    var cables = [], cable, _c;
+    cdata.forEach(function(_c) {
+      title = _c.title.val();
+      cable = {};
+      try {
+        if (_c.id) {
+          cable._id = _c.id;
+          if (_c.delete.is(':checked') || !title) { cable.delete = 'on'; throw false; }
+          else throw true;
+        } else if (title) throw true;
+      } catch(e) {
+        if (e) { cable.title = title; cable.details = _c.details.val(); cable.color = _c.clr; }
+        cables.push(cable);
+      }
+    });
+    $scope.formData = {};
+    $scope.formData.cables = JSON.stringify(cables);
+    //console.table(cables); console.log($scope.formData.cables); return false;
+    return form.post();
   }
 
-  function addCable(id) {
-var cable;
-if (id) {
-  cable = $scope.cables[id];
-  cable.id = id;
-} else cable = ['', '', 0];
-cable = new Cable(cable);
-cable.row.appendTo(tb);
-cdata.push(cable);
+  function addCable(cable) {
+    cable = new Cable(cable);
+    cable.row.appendTo(tb);
+    cdata.push(cable);
   }
 
   var form, cdata, tb;
   web2spa.load_and_render({doctitle:L._CABLES_}, function() {
-form = new Form({submit: cablesSubmit});
-cdata = [];
-tb = $('#cablebody');
-for (var ci in $scope.cables) addCable(ci);
-$('#addCable').click(function() { addCable(); });
+    form = new Form({submit: cablesSubmit});
+    cdata = [];
+    tb = $('#cablebody');
+    //for (var ci in $scope.cables) addCable(ci);
+    $scope.cables.forEach(addCable);
+    $('#addCable').click(addCable);
   });
 }
 /* end edit cables controller */

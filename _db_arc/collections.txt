@@ -1,0 +1,7 @@
+auth_user first_name,last_name,email,password,registration_key,reset_password_key,registration_id
+auth_group role,description
+auth_membership user_id,group_id
+cables title,details,color
+crosses title
+verticals cross,title
+plints vertical,title,details,comdata,start1,cable,mon,mby,pairs

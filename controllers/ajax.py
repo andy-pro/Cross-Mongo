@@ -72,10 +72,12 @@ def __a(i):
     return ObjectId(request.args(i))
 
 def cables():
-    return dict(cables=dict((str(r['_id']),(r['title'], r['details'], r['color'])) for r in dbcable.find()))
+    return dict(cables=[(str(r['_id']), r['title'], r['details'], r['color']) for r in dbcable.find().sort('title', 1)])
 
 def cross():
-    return dict(crosses=[(str(r['_id']), r['title'], [(str(w['_id']), w['title']) for w in dbvert.find({'cross':r['_id']})]) for r in dbcross.find()])
+    return dict(crosses=[(str(r['_id']), r['title'], [(str(w['_id']), w['title'])
+        for w in dbvert.find({'cross':r['_id']}).sort('_id', 1)])
+        for r in dbcross.find().sort('_id', 1)])
 
 def news():
     request.vars.news = True;
@@ -87,12 +89,14 @@ def fheader(search, rows):
 def vertical():
     search = request.vars.search or False
     news = request.vars.news or False
+    edit_mode = request.edit_mode or False
+    view_mode = not news and not edit_mode
     title = cross = ''
     if search:
         rows = search_plints(search, pfset=pdtset)
         header = fheader(search, rows)
     elif news:
-        rows = dbplint.find().sort('modon', -1).limit(50)
+        rows = dbplint.find().sort('mon', -1).limit(50)
         header = T('Last modified')
     else:
         vertical = Vertical(__a(0))
@@ -100,26 +104,26 @@ def vertical():
         header = vertical.header
         cross = vertical.cross.title
         rows = dbplint.find({'vertical': vertical.oi}).sort('_id', 1)
-    xp = __a(1) if request.edit_mode and request.args(1) else 0 # first plint from cable
+    xp = __a(1) if edit_mode and request.args(1) else 0 # first plint from cable
     s_plint = 0
     plints = []
     cable_map = {}
     for plint in rows:
         cable = plint['cable']
-        csoi = str(cable)
+        csoi = str(cable) if cable else ''
         if not s_plint and xp and xp==plint['_id']:
             xp = plint
             s_plint = dict(title=plint['title'], count=0, cable=csoi)
         if s_plint and s_plint['cable'] and s_plint['cable']==csoi:
             s_plint['count'] += 1
-        who = get_user_name(plint['modby']) # distribute user name
+        who = get_user_name(plint['mby']) # distribute user name
         tr={'id':str(plint['_id']),
             'title': plint['title'],
             'start1': plint['start1'],
             'comdata': plint['comdata'],
-            'modon': plint['modon'],
-            'modby':who['soi']}
-        if cable and not news:
+            'mon': plint['mon'],
+            'mby':who['soi']}
+        if view_mode and cable:
             tr['cable'] = csoi
             if not cable_map.get(csoi):
                 cable = dbcable.find_one({'_id': cable})
@@ -137,7 +141,7 @@ def vertical():
                     idx = i
                 else:
                     old = when
-            elif request.edit_mode: # in edit mode(see editvertical) pairs whenwho not needed
+            elif edit_mode: # in edit mode(see editvertical) pairs whenwho not needed
                 td.append(ttl)
             else:
                 who = get_user_name(pair['mby']) # distribute user name
@@ -148,7 +152,7 @@ def vertical():
         plints.append(add_root(tr, plint) if search or news else tr)
     result = dict(header=header, plints=plints, users=user_map, vertical=title, cross=cross)
     if not news:
-        result['cables'] = cable_map
+        result.update(cables() if edit_mode else dict(cables=cable_map))
     if isinstance(xp, dict): # edit vertical mode, plint's group on cable
         result['s_plint'] = s_plint # first plint in group
         if xp['cable']:
@@ -157,14 +161,7 @@ def vertical():
                 result['chain'] = [add_root(dict(plintId=str(xp['_id']), title=xp['title']), xp)]
     return result
 
-#def plints():
-    #return dict(data=[(i.id,i.title,int(i.start1)) for i in db(db.plints.vertical == request.args(0, cast = int)).select(*pfset1, orderby=db.plints.id)])
-
-#def plintspid():    # add pair titles to response
-    #return dict(data=[(i.id,i.title,int(i.start1),get_pids(i)) for i in db(db.plints.vertical == request.args(0, cast = int)).select(*pfset2, orderby=db.plints.id)])
-
 def plintscd():    # add common data to response
-    #return dict(data=[(str(i['_id']), i['title'], i['start1'], i['comdata']) for i in dbplint.find({'vertical': __a(0)}, pfset1m).sort('_id', 1)])
     return dict(data=[(str(i['_id']), i['title'], i['start1'], i['comdata'], get_pttl_array(i)) for i in dbplint.find({'vertical': __a(0)}).sort('_id', 1)])
 
 def comdict(data):
@@ -188,7 +185,6 @@ def editvertical():
 
 @auth.requires_membership('managers')
 def editplint():
-    #data = Plint(request.args(0, cast = int))
     data = Plint(__a(0))
     result = comdict(data)
     result.update(dict(pairtitles=get_pttl(data.record),
@@ -219,15 +215,14 @@ def __getchain():
         q = data.title
         linkId = data.soi + str(data.index)
         pairs = []
-        if test_query(q):
-            rows = search_plints(q, like=False)  # exact matching
-            for plint in rows:
-                for i in xrange(10):
-                    if plint['pairs'][i]['ttl'] == q:
-                        pairs.append(add_link(plint, i, linkId))
-            pairs.sort(key = lambda tr: tr['pch'])
-        else:
+        rows = search_plints(q, like=False)  # exact matching
+        for plint in rows:
+            for i in xrange(10):
+                if plint['pairs'][i]['ttl'] == q:
+                    pairs.append(add_link(plint, i, linkId))
+        if not pairs:
             pairs.append(add_link(data.record, data.index, linkId))
+        pairs.sort(key = lambda tr: tr['pos'])
         result['chain'] = pairs
         result['chain_mode'] = True
     return result
@@ -246,20 +241,21 @@ def add_formkey(data):
     return data
 
 def add_root(tr, plint):
-    oi = plint['cross']
-    tr['crossId'] = str(oi)
-    tr['cross'] = dbcross.find_one({'_id': oi})['title']
     oi = plint['vertical']
     tr['verticalId'] = str(oi)
-    tr['vertical'] = dbvert.find_one({'_id': oi})['title']
+    rec = dbvert.find_one({'_id': oi})
+    tr['vertical'] = rec['title']
+    oi = rec['cross']
+    tr['crossId'] = str(oi)
+    tr['cross'] = dbcross.find_one({'_id': oi})['title']
     return tr
 
 def add_link(plint, i, linkId=False):
     pair = plint['pairs'][i]
     soi = str(plint['_id'])
     tr = dict(plintId=soi, pairId=i, plint=plint['title'], start1=plint['start1'], comdata=plint['comdata'],
-              pdt=pair['det'],
-              pch=pair['pos'],
+              det=pair['det'],
+              pos=pair['pos'],
               par=pair['par'],
               clr=pair['clr']
     )
@@ -268,7 +264,6 @@ def add_link(plint, i, linkId=False):
     return add_root(tr, plint)
 
 def viewfound():
-    #search = request.vars.search
     plints = search_plints(pfset=['pairs.ttl'])
     q = request.vars.ulsearch
     chains = []
@@ -289,19 +284,20 @@ def viewfound():
                     })
     chains.sort(key = lambda chain: chain['title'])
     for chain in chains:
-        chain['chain'].sort(key = lambda link: link['pch'])
+        chain['chain'].sort(key = lambda link: link['pos'])
     return dict(doctitle=fheader(request.vars.search, plints), chains=chains)
 
 def test_query(q):
-    try:
-        uq = unicode(q, 'utf-8')
-    except:
-        uq = q
-    res = len(uq) > 2 # search query is long enough
-    if res:
-        request.vars.usearch = uq
-        request.vars.ulsearch = uq.lower()
-    return res
+    if isinstance(q, str):
+        q = unicode(q, 'utf-8')
+    if isinstance(q, unicode):
+        res = len(q) > 2 # search query is long enough
+        if res:
+            request.vars.usearch = q
+            request.vars.ulsearch = q.lower()
+        return res
+    else:
+        return False
 
 def search_plints(q=None, like=True, pfset=ptset):
     q = q or request.vars.search
@@ -309,16 +305,10 @@ def search_plints(q=None, like=True, pfset=ptset):
         if like:
             q = request.vars.ulsearch
             re = {'$regex': q, '$options': 'i'}
-            result = dbplint.find({'$or': [dict([(k, re)]) for k in pfset]})
-            #queries = [db.plints[field].contains(q) for field in pfset]
-            #queries = [db.plints[field].contains(q, case_sensitive=False) for field in pfset] # case_sensitive=True in mongo causes an error
-            #queries = [db.plints[field].contains(q, case_sensitive=False) for field in pfset] # case_sensitive=True in mongo causes an error
+            f = {'$or': [dict([(k, re)]) for k in pfset]}
         else:
-            result = dbplint.find({'pairs.ttl': q})
-            #queries = [db.plints[field] == q for field in pfset]
-        #query = reduce(lambda a, b: (a | b), queries)
-        #print query
-        #result = db(query).select(orderby=db.plints.cross)  # sort by crosses
+            f = {'pairs.ttl': q}
+        result = dbplint.find(f)
         response.searchstatus = 'OK' if result else T('not found!')
         return result
     else:
@@ -359,20 +349,35 @@ def json_to_utf(input):
         elif isinstance(input, list):
             return [byteify(element) for element in input]
         elif isinstance(input, unicode):
-            return input.encode('utf-8')
+            #return input.encode('utf-8')
+            return input
         else:
             return input
     return byteify(json.loads(input))
 
+def toUnicode(input):
+    for key in input:
+        q = input[key]
+        if isinstance(q, str):
+            input[key] = unicode(q, 'utf-8')
+    return input
+
+def toStorage(input):
+    import json
+    from gluon.storage import Storage
+    return Storage(json.loads(input))
+
+def toJSON(input):
+    import json
+    return json.loads(input)
+
 @auth.requires_membership('managers')
 def update():
     vars = request.vars
-    #print vars.userId
-    #print user_id
     try:
         msg = ''
-        formname = vars.formname
-        formkey = vars.formkey
+        formname = vars.pop('formname')
+        formkey = vars.pop('formkey')
         keyname = '_formkey[%s]' % formname
         formkeys = list(session.get(keyname, []))
         if formkey and formkeys and formkey in formkeys:  # check if user tampering with form and void CSRF
@@ -383,8 +388,7 @@ def update():
         if not auth.user:
             msg = T('UNAUTHORIZED!')
             raise
-        #if int(vars.userId) != int(auth.user.id):
-        if vars.userId != user_id:
+        if vars.pop('userId') != user_id:
             msg = T('Access error!')
             raise
     except:
@@ -407,67 +411,63 @@ def update():
                     changed = True
                     result['location'] = '' # this will redirect to home page index/#
                 else:
-                    vt = cross.update(vars)
+                    vt = cross.update(toUnicode(vars))
                     changed = bool(vt)
                     if ObjectId.is_valid(vt):
                         result['location'] = 'editvertical/' + str(vt)
         elif formname == 'editvertical':
             # save formData from Edit Vertical Controller
-            vertical = Vertical(request.args(0))
-            vars = json_to_utf(vars.vertical)
+            vertical = Vertical(__a(0))
             if vars.delete:
                 vertical.delete()
                 changed = True
                 result['location'] = ''
             else:
+                vars = toJSON(vars.vertical)
                 changed = vertical.update(vars)
-                result['location'] = 'vertical/' + str(vertical.index)
+                result['location'] = 'vertical/' + vertical.soi
         elif formname == 'editplint':
-            plint = Plint(request.args(0))
+            plint = Plint(__a(0))
             if vars.delete:
                 plint.delete()
             else:
-                changed = plint.update(vars)
+                changed = plint.update(toUnicode(vars))
         elif formname == 'editpair' or formname == 'editfound':
-            plints = json_to_utf(vars.plints)
-            for i in plints:
-                if plint_update(i, {}, plints[i]):
+            for k, v in toJSON(vars.plints).iteritems():
+                if plint_update(k, v):
                     changed = True
         elif formname == 'editcables':
-            cables = json_to_utf(vars.cables)
+            cables = toJSON(vars.cables)
             for i in cables:
-                idx = i.id
-                if i.delete:
-                    #db(db.cables.id==idx).delete()
-                    del db.cables[idx]
+                oi = i.get('_id')
+                oi = {'_id': ObjectId(oi)} if oi else None
+                if i.has_key('delete'):
+                    dbcable.delete_one(oi)
                     changed = True
                 else:
-                    #db.cables[i.pop('id', 0)] = i
-                    if idx:
-                        d = db.cables[idx].as_dict()
-                        del d['id']
-                        del i['id']
+                    if oi:
+                        d = dbcable.find_one(oi)
+                        del d['_id']
+                        del i['_id']
                         if cmp(d, i)!=0:
-                            db.cables[idx] = i
+                            dbcable.update_one(oi, {'$set': i})
                             changed = True
                     else:
-                        db.cables[0] = i    # insert new
+                        dbcable.insert_one(i) # insert new
                         changed = True
         elif formname == 'restore':
             f = vars.upload.file
-            #print vars
             if vars.txt == 'true':
                 import txt_to_db
                 f = txt_to_db.import_from_txt1(f, get_tb_fields())
-            # gluon\packages\dal\pydal\base.py, line 1075
-            # gluon\packages\dal\pydal\objects.py, line 826
             db.import_from_csv_file(f, restore = not bool(vars.merge))
             msg = T('Database restored')
             result['location'] = ''
         else:
             pass
-    except:
-        msg = T('Error')
+    except Exception as e:
+        print e.message, e.args
+        msg = T('Error' + ': ' + e.message)
         result['status'] = False
         result['location'] = ''
     result['details'] = msg if msg else T('Database update success!') if changed else T('No changes')
@@ -479,8 +479,6 @@ def user():
     action = request.args(0) or 'login'
     if action != 'logout' and action != 'reset_password':
         _next = request.env.http_web2py_component_location
-        #form = getattr(auth, action)(onaccept=lambda form: response.headers.update({'web2py-component-command': "document.location='%s'" % _next}))
-        #form = getattr(auth, action)(onaccept=lambda form: response.headers.update())
         form = getattr(auth, action)()
         title = ''
         script = ''
@@ -509,7 +507,3 @@ def error():
         if res['code']==code:
             res['msg'] = msg
     return res
-
-#def sqlite_csv_to_mongo():
-
-

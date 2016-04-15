@@ -13,25 +13,27 @@ function Chain(depth, ext) { // constructor
 		link.row.appendTo(this.body);
 		this.count++;
 	}
-	this.order = function(title, details) {
-		var link, row, id, pch=1, self = this, plints = this.plints;
+	this.setPlint = function(oi, id, edited, ttl, pos, par, clr, det) {
+		var	pre = `pairs.${id}.`, plints = this.plints;
+		if (!plints[oi]) plints[oi]= {};
+		plints[oi][pre+'ttl'] = ttl || '';
+		plints[oi][pre+'pos'] = pos || 0;
+		plints[oi][pre+'par'] = par || 0;
+		plints[oi][pre+'clr'] = clr || 0;
+		if (edited) plints[oi][pre+'det'] = det || '';
+		//console.log('oi:', oi, 'plint:', plints[oi]);
+	}
+	this.order = function(ttl, det) {
+		var link, oi, pos=1, self = this;
 		$.each(this.body.sortable('toArray'), function() {
 			link = self.chain[this.split('-')[1]];  // retrive index from id='chainId-index'
-			row = link.plint.id;
-			id = link.pair.id;
-			//console.log('link:', link, 'row:', row);
-			if (row > 0) {  // pearl off rows with "Not crossed"
-				if (!plints[row]) plints[row]= {};
-				plints[row]['pid'+id] = title;
-				plints[row]['pch'+id] = pch++;
-				plints[row]['par'+id] = link.par;
-				plints[row]['clr'+id] = +link.clr;
-				if (link.edited) plints[row]['pdt'+id] = details;
+			oi = link.plint.id;
+			if (oi) {  // pearl off rows with "Not crossed"
+				self.setPlint(oi, link.pair.id, link.edited, ttl, pos++, link.par, link.clr, det);
 			}
 		});
 	}
 	this.stages = ['cross','vertical','plint','pair'];
-	//this.cache = web2spa.load('cross', {unescape:true, clearpath:true}).data;
 	this.cache = $scope.crosses;
 	this.body = $('#chainbody');
 	this.plints = {};
@@ -44,14 +46,7 @@ function Chain(depth, ext) { // constructor
 		var self = this, plints = this.plints;
 		$.each($scope.chain, function() {
 			self.addLink(this);
-			var row = this.plintId, id = this.pairId;
-			if (!plints[row]) plints[row] = {};
-			plints[row]['pid'+id] = '';  // if pair becomes 'Not crossed', his title is ''
-			plints[row]['pch'+id] = 0;  //  chain position = 0
-			plints[row]['par'+id] = false;  // parallel presence is false
-			plints[row]['clr'+id] = 0;  // pair color
-			if (this.edited) plints[row]['pdt'+id] = ''; // native link
-			//console.log(row, ':', plints[row]);
+			self.setPlint(this.plintId, this.pairId, this.edited);
 		});
 		this.body.sortable();
 		$('#addLink').click(function() { self.addLink(); });
@@ -71,7 +66,7 @@ function Link(Chain, link) { // constructor
 	this.plint = {id: link.plintId || ''};
 	this.pair = {id: link.pairId || ''};
 	this.edited = link.edited;
-	this.par = link.par || false;
+	this.par = Boolean(link.par);
 	this.clr = link.clr || 0;
 	this.row = $('<tr id="%s">'.format('chainId-'+this.id));
 	this.cache = [];
@@ -227,13 +222,14 @@ Link.prototype = {
 
 /*** Model: Cable ***/
 function Cable(cable) { // constructor
+	if (!(cable instanceof Array)) cable = ['', '', '', 0]
 	this.row = $('<tr>');
-	this.title = this.addCell(this._inp).val(cable[0]);
-	this.details = this.addCell(this._inp).val(cable[1]);
-	this.clr = cable[2];
+	this.title = this.addCell(this._inp).val(cable[1]);
+	this.details = this.addCell(this._inp).val(cable[2]);
+	this.clr = cable[3];
 	this.addCell('<select>').on('change', colorChange).colouring(this.clrs).val(this.clr).trigger('change');
-	if (cable.id) {
-		this.id = cable.id;
+	if (cable[0]) {
+		this.id = cable[0];
 		this.delete = $('<input type="checkbox">');
 	}
 	$('<td class="padd9">').append(this.delete).appendTo(this.row);

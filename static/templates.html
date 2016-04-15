@@ -37,7 +37,7 @@
           s_mode = Boolean(search);
       for(var ci in plints) {
           var plint=plints[ci], _pattr='', _style=0,
-              _href2=href2+plint.id+'/', pairs=plint.pairs, start1=parseInt(plint.start1), when=plint.modon, who=users[plint.modby];
+              _href2=href2+plint.id+'/', pairs=plint.pairs, start1=parseInt(plint.start1), when=plint.mon, who=users[plint.mby];
           if (plint.cable&&!news) { _pattr=cables[plint.cable]; if (!s_mode) _style=_pattr[2]; _pattr = _pattr[0]; }
           _pattr='class="web2spa" title="%s\n%s\n%s\n%s\n%s"'.format(plint.title, plint.comdata, when, who, _pattr);
     %>
@@ -96,7 +96,7 @@
 </script>
 
 <script type="text/html" id="ViewFoundTmpl">
-<div class="col-md-9">
+<div class="col-md-10">
   <div class="panel panel-default">
     <div class="panel-heading"><label><%=doctitle%></label><%=L._BTNBACK_%></div>
     <table class="table table-bordered table-supercondensed">
@@ -206,11 +206,10 @@
         <div class="form-group">
           <div class="checkbox col-md-offset-3 col-md-3"><label><input id="setCable" type="checkbox"><%=L._SET_CABLE_%></label></div>
           <div class="col-md-5"><select id="cables" class="form-control">
-            <option value="0">No cable</option>
-            <%for(var ci in obj.cables){
-              var cable = obj.cables[ci];
-              print(`<option value="${ci}" style="background:${app.CABLE_CLRS[cable[2]]}">${cable[0]+(cable[1]?("&nbsp;("+cable[1]+")"):"")}</option>`);
-            }%>
+            <option value="">No cable</option>
+            <%obj.cables.forEach(function(cable) {
+              print(`<option value="${cable[0]}" style="background:${app.CABLE_CLRS[cable[3]]}">${cable[1]+(cable[2]?("&nbsp;("+cable[2]+")"):"")}</option>`);
+            });%>
           </select></div>
         </div>
         <table id="chaintable" class="table table-condensed">
@@ -301,8 +300,8 @@
           <div class="col-md-8">
             <div class="pair-ol"><ol start="0"><%for(var i=0; i<10; i++) print("<li></li>");%></ol></div>
             <div class="pair-li">
-            <textarea class="form-control pair-data" wrap="off" rows="10" name="pairtitles" style="resize:none;"></textarea>
-            <textarea class="form-control pair-data" wrap="off" rows="10" name="pairdetails" style="display:none;resize:none;"></textarea>
+            <textarea class="form-control pair-data" wrap="off" rows="10" name="pairtitles" style="resize:none" spellcheck="false"></textarea>
+            <textarea class="form-control pair-data" wrap="off" rows="10" name="pairdetails" style="display:none;resize:none" spellcheck="false"></textarea>
             </div>
           </div>
         </div>
